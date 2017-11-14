@@ -107,3 +107,6 @@ venv.bak/
 *.dta
 *.ods
 *.do
+
+# config files (flake8)
+*.cfg

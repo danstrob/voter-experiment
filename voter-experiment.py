@@ -36,15 +36,24 @@ voter_data['assessment_vig'] = voter_data[assessment_vig_ovp].fillna(
 
 # create identifier for treatment groups (TODO: more elegant solution?)
 voter_data['treatment_groups'] = np.nan
-voter_data.ix[voter_data.eval('{}.notnull() | {}.notnull() | {}.notnull()'.format(
-    *vars['ovp_vignette'])), 'treatment_groups'] = 'ÖVP vignette'
-voter_data.ix[voter_data.eval('{}.notnull() | {}.notnull() | {}.notnull()'.format(
-    *vars['spo_vignette'])), 'treatment_groups'] = 'SPÖ vignette'
+voter_data.loc[
+    voter_data.eval('{}.notnull() | {}.notnull() | {}.notnull()'.format(
+        *vars['ovp_vignette'])), 'treatment_groups'] = 'ÖVP vignette'
+voter_data.loc[
+    voter_data.eval('{}.notnull() | {}.notnull() | {}.notnull()'.format(
+        *vars['spo_vignette'])), 'treatment_groups'] = 'SPÖ vignette'
+
+# create identifier for partisan groups
+voter_data['partisan_id'] = voter_data['w1_q19']
+partisan_dict = {1: 'SPÖ partisan', 2: 'ÖVP partisan'}
+partisan_dict.update({i: 'Non-partisan/other' for i in range(3, 8)})
+voter_data.loc[:, 'partisan_id'] = voter_data['partisan_id'].replace(
+    partisan_dict)
 
 
-##############################
-### descriptive statistics ###
-##############################
+##########################
+# descriptive statistics #
+##########################
 
 # number of non-missing observations in variables
 for x in vars.values():
@@ -56,14 +65,15 @@ spo_mean_vig_spo = voter_data[spo_pos_vig_spo].mean()
 print(stats.ttest_ind(voter_data[spo_pos_vig_ovp], voter_data[spo_pos_vig_spo],
                       equal_var=False, nan_policy='omit'))
 
-spo_plot1 = sns.violinplot(x="treatment_groups", y="spo_pos", data=voter_data)
-plt.plot([0, 1], [spo_mean_vig_ovp, spo_mean_vig_spo],
-         linestyle='-', marker='o', color='#e87e7e')
-spo_plot1.set(xlabel='', ylabel='SPÖ placement on asylum law')
+sns.violinplot(x="treatment_groups", y="spo_pos", data=voter_data)
+plt.xlabel('')
+plt.ylabel('SPÖ placement on asylum law')
 plt.yticks(np.arange(0, 11, 2),
            (['soften' if x == 0 else
              'tighten' if x == 10 else
              x for x in np.arange(0, 11, 2)]))
+plt.plot([0, 1], [spo_mean_vig_ovp, spo_mean_vig_spo],
+         linestyle='-', marker='o', color='#e87e7e')
 plt.show()
 
 # mean differences: ÖVP position (comparing SPÖ/ÖVP vignettes)
@@ -72,12 +82,42 @@ ovp_mean_vig_spo = voter_data[ovp_pos_vig_spo].mean()
 print(stats.ttest_ind(voter_data[ovp_pos_vig_ovp], voter_data[ovp_pos_vig_spo],
                       equal_var=False, nan_policy='omit'))
 
-ovp_plot1 = sns.violinplot(x="treatment_groups", y="ovp_pos", data=voter_data)
-plt.plot([0, 1], [ovp_mean_vig_ovp, ovp_mean_vig_spo],
-         linestyle='-', marker='o', color='#e87e7e')
-ovp_plot1.set(xlabel='', ylabel='ÖVP placement on asylum law')
+sns.violinplot(x="treatment_groups", y="ovp_pos", data=voter_data)
+plt.xlabel('')
+plt.ylabel('ÖVP placement on asylum law')
 plt.yticks(np.arange(0, 11, 2),
            (['soften' if x == 0 else
              'tighten' if x == 10 else
              x for x in np.arange(0, 11, 2)]))
+plt.plot([0, 1], [ovp_mean_vig_ovp, ovp_mean_vig_spo],
+         linestyle='-', marker='o', color='#e87e7e')
 plt.show()
+
+# stacked barplot for assessment of vignette
+crosstab_spo = pd.crosstab(voter_data[assessment_vig_spo], voter_data['partisan_id'], margins=True)
+crosstab_ovp = pd.crosstab(voter_data[assessment_vig_ovp], voter_data['partisan_id'], margins=True)
+
+y = {}
+ind = [0, 1, 3, 4, 6, 7]
+for i in range(5):
+    spov = crosstab_spo.iloc[i, :3] / crosstab_spo.iloc[5, :3]
+    ovpv = crosstab_ovp.iloc[i, :3] / crosstab_ovp.iloc[5, :3]
+    y[i] = sum(map(list, zip(spov, ovpv)), [])
+
+plt.bar(ind, y[0])
+plt.bar(ind, y[1], bottom=y[0])
+bottom = [i + j for i, j in zip(y[0], y[1])]
+plt.bar(ind, y[2], bottom=bottom)
+bottom = [i + j for i, j in zip(bottom, y[2])]
+plt.bar(ind, y[3], bottom=bottom)
+bottom = [i + j for i, j in zip(bottom, y[3])]
+plt.bar(ind, y[4], bottom=bottom)
+
+plt.xticks([.5, 3.5, 6.5], ['Non-partisan/other',
+                            'SPÖ partisan', 'ÖVP partisan'])
+plt.xlabel('')
+plt.ylabel('Assessment of asylum law')
+plt.show()
+
+sns.violinplot(x='partisan_id', y='assessment_vig',
+               hue='treatment_groups', data=voter_data)
