@@ -4,7 +4,7 @@ import numpy as np
 import scipy.stats as stats
 import seaborn as sns
 
-sns.set(style="whitegrid", palette="pastel", color_codes=True)
+sns.set(style="whitegrid", palette='pastel', color_codes=True)
 
 # path to Stata file
 stata_file = 'data/AUTNES_OPS_2017_w1-4_DE.dta'
@@ -94,30 +94,37 @@ plt.plot([0, 1], [ovp_mean_vig_ovp, ovp_mean_vig_spo],
 plt.show()
 
 # stacked barplot for assessment of vignette
-crosstab_spo = pd.crosstab(voter_data[assessment_vig_spo], voter_data['partisan_id'], margins=True)
-crosstab_ovp = pd.crosstab(voter_data[assessment_vig_ovp], voter_data['partisan_id'], margins=True)
+crosstab_spo = pd.crosstab(
+    voter_data[assessment_vig_spo], voter_data['partisan_id'], margins=True)
+crosstab_ovp = pd.crosstab(
+    voter_data[assessment_vig_ovp], voter_data['partisan_id'], margins=True)
 
 y = {}
-ind = [0, 1, 3, 4, 6, 7]
 for i in range(5):
-    spov = crosstab_spo.iloc[i, :3] / crosstab_spo.iloc[5, :3]
     ovpv = crosstab_ovp.iloc[i, :3] / crosstab_ovp.iloc[5, :3]
-    y[i] = sum(map(list, zip(spov, ovpv)), [])
+    spov = crosstab_spo.iloc[i, :3] / crosstab_spo.iloc[5, :3]
+    y[i] = sum(map(list, zip(ovpv, spov)), [])
 
-plt.bar(ind, y[0])
-plt.bar(ind, y[1], bottom=y[0])
+ind = [0, 1, 3, 4, 6, 7]
+fig, ax = plt.subplots()
+bar1 = ax.bar(ind, y[0], color='#083c7d')
+bar2 = ax.bar(ind, y[1], bottom=y[0], color='#3b8bc2')
 bottom = [i + j for i, j in zip(y[0], y[1])]
-plt.bar(ind, y[2], bottom=bottom)
+bar3 = ax.bar(ind, y[2], bottom=bottom, color='#c6dbef')
 bottom = [i + j for i, j in zip(bottom, y[2])]
-plt.bar(ind, y[3], bottom=bottom)
+bar4 = ax.bar(ind, y[3], bottom=bottom, color='#fc8767')
 bottom = [i + j for i, j in zip(bottom, y[3])]
-plt.bar(ind, y[4], bottom=bottom)
-
+bar5 = ax.bar(ind, y[4], bottom=bottom, color='#7c0510')
+fig.legend([bar1, bar2, bar3, bar4, bar5],
+           ['very good', 'good', 'so-so', 'bad', 'very bad'],
+           bbox_to_anchor=(.8, 1), ncol=3, fancybox=True, shadow=True)
+ax.set_ylabel('Assessment of asylum law')
 plt.xticks([.5, 3.5, 6.5], ['Non-partisan/other',
                             'SPÖ partisan', 'ÖVP partisan'])
-plt.xlabel('')
-plt.ylabel('Assessment of asylum law')
 plt.show()
 
 sns.violinplot(x='partisan_id', y='assessment_vig',
                hue='treatment_groups', data=voter_data)
+plt.xlabel('')
+plt.ylabel('Assessment of asylum law')
+plt.yticks(np.arange(1, 6, 1), )
