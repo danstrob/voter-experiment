@@ -4,7 +4,9 @@ import numpy as np
 import scipy.stats as stats
 import seaborn as sns
 
-sns.set(style="whitegrid", palette='pastel', color_codes=True)
+sns.set(style='darkgrid', color_codes=True)
+sns.set_palette('pastel')
+party_colors = sns.color_palette(["#5b728a", "#e74c3c"])
 
 # path to Stata file
 stata_file = 'data/AUTNES_OPS_2017_w1-4_DE.dta'
@@ -31,8 +33,8 @@ voter_data['spo_pos'] = voter_data[spo_pos_vig_ovp].fillna(
     voter_data[spo_pos_vig_spo])
 voter_data['ovp_pos'] = voter_data[ovp_pos_vig_ovp].fillna(
     voter_data[ovp_pos_vig_spo])
-voter_data['assessment_vig'] = voter_data[assessment_vig_ovp].fillna(
-    voter_data[assessment_vig_spo])
+voter_data['assessment_vig'] = -1 * voter_data[assessment_vig_ovp].fillna(
+    voter_data[assessment_vig_spo]) + 6  # flip the scale
 
 # create identifier for treatment groups (TODO: more elegant solution?)
 voter_data['treatment_groups'] = np.nan
@@ -45,8 +47,8 @@ voter_data.loc[
 
 # create identifier for partisan groups
 voter_data['partisan_id'] = voter_data['w1_q19']
-partisan_dict = {1: 'SPÖ partisan', 2: 'ÖVP partisan'}
-partisan_dict.update({i: 'Non-partisan/other' for i in range(3, 8)})
+partisan_dict = {1: 'SPÖ partisans', 2: 'ÖVP partisans'}
+partisan_dict.update({i: 'Non-partisans/other' for i in range(3, 8)})
 voter_data.loc[:, 'partisan_id'] = voter_data['partisan_id'].replace(
     partisan_dict)
 
@@ -65,66 +67,51 @@ spo_mean_vig_spo = voter_data[spo_pos_vig_spo].mean()
 print(stats.ttest_ind(voter_data[spo_pos_vig_ovp], voter_data[spo_pos_vig_spo],
                       equal_var=False, nan_policy='omit'))
 
-sns.violinplot(x="treatment_groups", y="spo_pos", data=voter_data)
-plt.xlabel('')
-plt.ylabel('SPÖ placement on asylum law')
-plt.yticks(np.arange(0, 11, 2),
-           (['soften' if x == 0 else
-             'tighten' if x == 10 else
-             x for x in np.arange(0, 11, 2)]))
-plt.plot([0, 1], [spo_mean_vig_ovp, spo_mean_vig_spo],
-         linestyle='-', marker='o', color='#e87e7e')
-plt.show()
-
 # mean differences: ÖVP position (comparing SPÖ/ÖVP vignettes)
 ovp_mean_vig_ovp = voter_data[ovp_pos_vig_ovp].mean()
 ovp_mean_vig_spo = voter_data[ovp_pos_vig_spo].mean()
 print(stats.ttest_ind(voter_data[ovp_pos_vig_ovp], voter_data[ovp_pos_vig_spo],
                       equal_var=False, nan_policy='omit'))
 
-sns.violinplot(x="treatment_groups", y="ovp_pos", data=voter_data)
-plt.xlabel('')
-plt.ylabel('ÖVP placement on asylum law')
-plt.yticks(np.arange(0, 11, 2),
-           (['soften' if x == 0 else
-             'tighten' if x == 10 else
-             x for x in np.arange(0, 11, 2)]))
-plt.plot([0, 1], [ovp_mean_vig_ovp, ovp_mean_vig_spo],
-         linestyle='-', marker='o', color='#e87e7e')
-plt.show()
+# graph differences in SPÖ and ÖVP placements by treatment groups
+fig, axs = plt.subplots(ncols=2)
+sns.violinplot(x="treatment_groups", y="spo_pos", data=voter_data,
+               ax=axs[0], palette=party_colors)
+sns.violinplot(x="treatment_groups", y="ovp_pos", data=voter_data,
+               ax=axs[1], palette=party_colors)
+axs[0].set_title('SPÖ')
+axs[1].set_title('ÖVP')
+axs[0].set_ylabel('Policy placement on asylum law')
+axs[1].set_ylabel('')
+axs[0].set_xlabel('')
+axs[1].set_xlabel('')
+plot_range = np.arange(0, 11, 2)
+axs[0].set_yticks(list(plot_range))
+axs[0].set_yticklabels(['soften' if x == 0 else
+                        'tighten' if x == 10 else
+                        x for x in plot_range])
+axs[0].plot([0, 1], [spo_mean_vig_ovp, spo_mean_vig_spo],
+            linestyle='-', marker='o', color='#e87e7e')
+axs[1].plot([0, 1], [ovp_mean_vig_ovp, ovp_mean_vig_spo],
+            linestyle='-', marker='o', color='#e87e7e')
+fig.savefig('position_placement_plt.pdf')
+fig.show()
 
-# stacked barplot for assessment of vignette
-crosstab_spo = pd.crosstab(
-    voter_data[assessment_vig_spo], voter_data['partisan_id'], margins=True)
-crosstab_ovp = pd.crosstab(
-    voter_data[assessment_vig_ovp], voter_data['partisan_id'], margins=True)
 
-y = {}
-for i in range(5):
-    ovpv = crosstab_ovp.iloc[i, :3] / crosstab_ovp.iloc[5, :3]
-    spov = crosstab_spo.iloc[i, :3] / crosstab_spo.iloc[5, :3]
-    y[i] = sum(map(list, zip(ovpv, spov)), [])
-
-ind = [0, 1, 3, 4, 6, 7]
-fig, ax = plt.subplots()
-bar1 = ax.bar(ind, y[0], color='#083c7d')
-bar2 = ax.bar(ind, y[1], bottom=y[0], color='#3b8bc2')
-bottom = [i + j for i, j in zip(y[0], y[1])]
-bar3 = ax.bar(ind, y[2], bottom=bottom, color='#c6dbef')
-bottom = [i + j for i, j in zip(bottom, y[2])]
-bar4 = ax.bar(ind, y[3], bottom=bottom, color='#fc8767')
-bottom = [i + j for i, j in zip(bottom, y[3])]
-bar5 = ax.bar(ind, y[4], bottom=bottom, color='#7c0510')
-fig.legend([bar1, bar2, bar3, bar4, bar5],
-           ['very good', 'good', 'so-so', 'bad', 'very bad'],
-           bbox_to_anchor=(.8, 1), ncol=3, fancybox=True, shadow=True)
-ax.set_ylabel('Assessment of asylum law')
-plt.xticks([.5, 3.5, 6.5], ['Non-partisan/other',
-                            'SPÖ partisan', 'ÖVP partisan'])
-plt.show()
-
-sns.violinplot(x='partisan_id', y='assessment_vig',
-               hue='treatment_groups', data=voter_data)
-plt.xlabel('')
-plt.ylabel('Assessment of asylum law')
-plt.yticks(np.arange(1, 6, 1), )
+# assessment by treatment groups
+fig, vio_plot = plt.subplots()
+vio_plot = sns.violinplot(x='partisan_id', y='assessment_vig',
+                          hue='treatment_groups', data=voter_data,
+                          palette=party_colors)
+vio_plot.set_aspect(.25)
+vio_plot.set_xlabel('')
+vio_plot.set_ylabel('Assessment of asylum law')
+plot_range = range(1, 6)
+vio_plot.set_yticks(list(plot_range))
+vio_plot.set_yticklabels(['very bad' if x == 1 else
+                          'very good' if x == 5 else
+                          x for x in plot_range])
+vio_plot.legend(bbox_to_anchor=(.7, 1), loc=3, borderaxespad=0.)
+fig.subplots_adjust(left=.2)
+fig.savefig('assessment_plt.pdf')
+fig.show()

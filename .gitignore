@@ -103,10 +103,12 @@ venv.bak/
 # mypy
 .mypy_cache/
 
-# Data/Stata files
+# Data/Stata and image files
 *.dta
 *.ods
 *.do
+*.pdf
+*.png
 
 # config files (flake8)
 *.cfg
