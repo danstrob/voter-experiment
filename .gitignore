@@ -109,6 +109,3 @@ venv.bak/
 *.do
 *.pdf
 *.png
-
-# config files (flake8)
-*.cfg

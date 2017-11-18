@@ -1,9 +1,10 @@
-import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import scipy.stats as stats
 import seaborn as sns
 
+# seaborn plot style settings
 sns.set(style='darkgrid', color_codes=True)
 sns.set_palette('pastel')
 party_colors = sns.color_palette(["#5b728a", "#e74c3c"])
@@ -34,16 +35,14 @@ voter_data['spo_pos'] = voter_data[spo_pos_vig_ovp].fillna(
 voter_data['ovp_pos'] = voter_data[ovp_pos_vig_ovp].fillna(
     voter_data[ovp_pos_vig_spo])
 voter_data['assessment_vig'] = -1 * voter_data[assessment_vig_ovp].fillna(
-    voter_data[assessment_vig_spo]) + 6  # flip the scale
+    voter_data[assessment_vig_spo]) + 6  # flip the assessment scale
 
-# create identifier for treatment groups (TODO: more elegant solution?)
+# create identifier for treatment groups
 voter_data['treatment_groups'] = np.nan
-voter_data.loc[
-    voter_data.eval('{}.notnull() | {}.notnull() | {}.notnull()'.format(
-        *vars['ovp_vignette'])), 'treatment_groups'] = 'ÖVP vignette'
-voter_data.loc[
-    voter_data.eval('{}.notnull() | {}.notnull() | {}.notnull()'.format(
-        *vars['spo_vignette'])), 'treatment_groups'] = 'SPÖ vignette'
+eval_ovp = '{}.notnull() | {}.notnull() | {}.notnull()'.format(*vars['ovp_vignette'])
+eval_spo = '{}.notnull() | {}.notnull() | {}.notnull()'.format(*vars['spo_vignette'])
+voter_data.loc[voter_data.eval(eval_ovp), 'treatment_groups'] = 'ÖVP vignette'
+voter_data.loc[voter_data.eval(eval_spo), 'treatment_groups'] = 'SPÖ vignette'
 
 # create identifier for partisan groups
 voter_data['partisan_id'] = voter_data['w1_q19']
@@ -64,12 +63,26 @@ for x in vars.values():
 # mean differences: SPÖ position (comparing SPÖ/ÖVP vignettes)
 spo_mean_vig_ovp = voter_data[spo_pos_vig_ovp].mean()
 spo_mean_vig_spo = voter_data[spo_pos_vig_spo].mean()
+spo_se_vig_ovp = stats.sem(voter_data[spo_pos_vig_ovp], nan_policy='omit')
+spo_se_vig_spo = stats.sem(voter_data[spo_pos_vig_spo], nan_policy='omit')
+spo_ci_vig_ovp = (spo_mean_vig_ovp - 1.96 * spo_se_vig_ovp,
+                  spo_mean_vig_ovp + 1.96 * spo_se_vig_ovp)
+spo_ci_vig_spo = (spo_mean_vig_spo - 1.96 * spo_se_vig_spo,
+                  spo_mean_vig_spo + 1.96 * spo_se_vig_spo)
+
 print(stats.ttest_ind(voter_data[spo_pos_vig_ovp], voter_data[spo_pos_vig_spo],
                       equal_var=False, nan_policy='omit'))
 
 # mean differences: ÖVP position (comparing SPÖ/ÖVP vignettes)
 ovp_mean_vig_ovp = voter_data[ovp_pos_vig_ovp].mean()
 ovp_mean_vig_spo = voter_data[ovp_pos_vig_spo].mean()
+ovp_se_vig_ovp = stats.sem(voter_data[ovp_pos_vig_ovp], nan_policy='omit')
+ovp_se_vig_spo = stats.sem(voter_data[ovp_pos_vig_spo], nan_policy='omit')
+ovp_ci_vig_ovp = (ovp_mean_vig_ovp - 1.96 * ovp_se_vig_ovp,
+                  ovp_mean_vig_ovp + 1.96 * ovp_se_vig_ovp)
+ovp_ci_vig_spo = (ovp_mean_vig_spo - 1.96 * ovp_se_vig_spo,
+                  ovp_mean_vig_spo + 1.96 * ovp_se_vig_spo)
+
 print(stats.ttest_ind(voter_data[ovp_pos_vig_ovp], voter_data[ovp_pos_vig_spo],
                       equal_var=False, nan_policy='omit'))
 
@@ -90,13 +103,12 @@ axs[0].set_yticks(list(plot_range))
 axs[0].set_yticklabels(['soften' if x == 0 else
                         'tighten' if x == 10 else
                         x for x in plot_range])
-axs[0].plot([0, 1], [spo_mean_vig_ovp, spo_mean_vig_spo],
+axs[0].plot([0, 1], [spo_mean_vig_ovp, spo_mean_vig_spo],  # add means to plot
             linestyle='-', marker='o', color='#e87e7e')
 axs[1].plot([0, 1], [ovp_mean_vig_ovp, ovp_mean_vig_spo],
             linestyle='-', marker='o', color='#e87e7e')
 fig.savefig('position_placement_plt.pdf')
 fig.show()
-
 
 # assessment by treatment groups
 fig, vio_plot = plt.subplots()
@@ -115,3 +127,8 @@ vio_plot.legend(bbox_to_anchor=(.7, 1), loc=3, borderaxespad=0.)
 fig.subplots_adjust(left=.2)
 fig.savefig('assessment_plt.pdf')
 fig.show()
+
+
+#########################
+# multivariate analyses #
+#########################
