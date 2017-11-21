@@ -27,3 +27,14 @@ ax.set_ylabel('Assessment of asylum law')
 plt.xticks([.5, 3.5, 6.5], ['Non-partisan/other',
                             'SPÖ partisan', 'ÖVP partisan'])
 plt.show()
+
+
+
+
+
+ass_n = np.arange(1, 6)
+treat_n = np.repeat([1], 5)
+pre = np.full(5, voter_data[spo_pos_pre].mean())
+Xnew = np.column_stack((ass_n, treat_n, pre))
+ynewpred = res.predict(Xnew)  # predict out of sample
+print(ynewpred)

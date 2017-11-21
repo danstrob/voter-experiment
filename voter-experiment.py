@@ -4,7 +4,7 @@ import pandas as pd
 import scipy.stats as stats
 import seaborn as sns
 from statsmodels.formula.api import ols
-
+from simulation import simulate, sim_predict
 
 # seaborn plot style settings
 sns.set(style='darkgrid', color_codes=True)
@@ -135,14 +135,14 @@ fig.show()
 #########################
 
 
-def params_to_df(results, decimals=2):
+def params_to_df(res, decimals=2):
     """
     Creates a pandas.core.frame.DataFrame from the parameters of a fitted statsmodels
     regression, along with 95% confidence intervals.
     """
-    coeffs = results.params
-    ci_lower = results.conf_int()[0]
-    ci_upper = results.conf_int()[1]
+    coeffs = res.params
+    ci_lower = res.conf_int()[0]
+    ci_upper = res.conf_int()[1]
     results = pd.DataFrame.from_items([('Coefficients', coeffs),
                                        ('Lower CI', ci_lower),
                                        ('Upper CI', ci_upper)])
@@ -163,23 +163,12 @@ for res in ols_results.values():
     print(params_to_df(res).to_latex())
 
 
-def simulate_regression(results, n=1000):
-    """
-    Takes draws of the parameters from a multivariate normal distribution based
-    on the estimated variance-covariance matrix of the statsmodels regression.
-    Runs the simulation n number of times and return an array with the simulated
-    parameters.
-    """
-    draws = np.zeros(shape=(n, len(results.params)))
-    for i in range(n):
-        draws[i] = np.random.multivariate_normal(np.array(results.params),
-                                                 np.array(results.cov_params()))
-    return draws
+sim = simulate(ols_results['spo'], m=10000)
+notreat = sim_predict(sim, setx={'spo_treatment': 0,
+                                 'w2_q23x1': voter_data['w2_q23x1'].mean()})
+treat = sim_predict(sim, setx={'spo_treatment': 1,
+                               'w2_q23x1': voter_data['w2_q23x1'].mean()})
+treatment_effect = treat-notreat
 
-
-ass_n = np.arange(1, 6)
-treat_n = np.repeat([1], 5)
-pre = np.full(5, voter_data[spo_pos_pre].mean())
-Xnew = np.column_stack((ass_n, treat_n, pre))
-ynewpred = res.predict(Xnew)  # predict out of sample
-print(ynewpred)
+sns.violinplot(treatment_effect, orient='v')
+plt.show()
