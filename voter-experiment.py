@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 import scipy.stats as stats
 import seaborn as sns
+from statsmodels.formula.api import ols
+
 
 # seaborn plot style settings
 sns.set(style='darkgrid', color_codes=True)
@@ -30,10 +32,8 @@ vars = {'pre': [spo_pos_pre, ovp_pos_pre],
 voter_data = pd.read_stata(stata_file, convert_categoricals=False)
 
 # create stacked post-vignette variables by filling NAs in treatment groups
-voter_data['spo_pos'] = voter_data[spo_pos_vig_ovp].fillna(
-    voter_data[spo_pos_vig_spo])
-voter_data['ovp_pos'] = voter_data[ovp_pos_vig_ovp].fillna(
-    voter_data[ovp_pos_vig_spo])
+voter_data['spo_pos'] = voter_data[spo_pos_vig_ovp].fillna(voter_data[spo_pos_vig_spo])
+voter_data['ovp_pos'] = voter_data[ovp_pos_vig_ovp].fillna(voter_data[ovp_pos_vig_spo])
 voter_data['assessment_vig'] = -1 * voter_data[assessment_vig_ovp].fillna(
     voter_data[assessment_vig_spo]) + 6  # flip the assessment scale
 
@@ -43,13 +43,14 @@ eval_ovp = '{}.notnull() | {}.notnull() | {}.notnull()'.format(*vars['ovp_vignet
 eval_spo = '{}.notnull() | {}.notnull() | {}.notnull()'.format(*vars['spo_vignette'])
 voter_data.loc[voter_data.eval(eval_ovp), 'treatment_groups'] = 'ÖVP vignette'
 voter_data.loc[voter_data.eval(eval_spo), 'treatment_groups'] = 'SPÖ vignette'
+voter_data['spo_treatment'] = pd.get_dummies(voter_data['treatment_groups'])['SPÖ vignette']
+voter_data['ovp_treatment'] = pd.get_dummies(voter_data['treatment_groups'])['ÖVP vignette']
 
 # create identifier for partisan groups
 voter_data['partisan_id'] = voter_data['w1_q19']
 partisan_dict = {1: 'SPÖ partisans', 2: 'ÖVP partisans'}
 partisan_dict.update({i: 'Non-partisans/other' for i in range(3, 8)})
-voter_data.loc[:, 'partisan_id'] = voter_data['partisan_id'].replace(
-    partisan_dict)
+voter_data.loc[:, 'partisan_id'] = voter_data['partisan_id'].replace(partisan_dict)
 
 
 ##########################
@@ -60,29 +61,27 @@ voter_data.loc[:, 'partisan_id'] = voter_data['partisan_id'].replace(
 for x in vars.values():
     print(voter_data[x].count())
 
-# mean differences: SPÖ position (comparing SPÖ/ÖVP vignettes)
-spo_mean_vig_ovp = voter_data[spo_pos_vig_ovp].mean()
-spo_mean_vig_spo = voter_data[spo_pos_vig_spo].mean()
-spo_se_vig_ovp = stats.sem(voter_data[spo_pos_vig_ovp], nan_policy='omit')
-spo_se_vig_spo = stats.sem(voter_data[spo_pos_vig_spo], nan_policy='omit')
-spo_ci_vig_ovp = (spo_mean_vig_ovp - 1.96 * spo_se_vig_ovp,
-                  spo_mean_vig_ovp + 1.96 * spo_se_vig_ovp)
-spo_ci_vig_spo = (spo_mean_vig_spo - 1.96 * spo_se_vig_spo,
-                  spo_mean_vig_spo + 1.96 * spo_se_vig_spo)
 
+def mean_ci(series):
+    """
+    mean_ci takes in a pandas.core.series.Series and returns its mean,
+    plus a tuple with the 95% confidence interval of the mean.
+    """
+    if len(series) > 0:
+        mean = series.mean()
+        se = stats.sem(series, nan_policy='omit')
+    return mean, (mean - 1.96 * se, mean + 1.96 * se)
+
+
+# mean differences: SPÖ position (comparing SPÖ/ÖVP vignettes)
+spo_mean_vig_ovp, spo_ci_vig_ovp = mean_ci(voter_data[spo_pos_vig_ovp])
+spo_mean_vig_spo, spo_ci_vig_spo = mean_ci(voter_data[spo_pos_vig_spo])
 print(stats.ttest_ind(voter_data[spo_pos_vig_ovp], voter_data[spo_pos_vig_spo],
                       equal_var=False, nan_policy='omit'))
 
 # mean differences: ÖVP position (comparing SPÖ/ÖVP vignettes)
-ovp_mean_vig_ovp = voter_data[ovp_pos_vig_ovp].mean()
-ovp_mean_vig_spo = voter_data[ovp_pos_vig_spo].mean()
-ovp_se_vig_ovp = stats.sem(voter_data[ovp_pos_vig_ovp], nan_policy='omit')
-ovp_se_vig_spo = stats.sem(voter_data[ovp_pos_vig_spo], nan_policy='omit')
-ovp_ci_vig_ovp = (ovp_mean_vig_ovp - 1.96 * ovp_se_vig_ovp,
-                  ovp_mean_vig_ovp + 1.96 * ovp_se_vig_ovp)
-ovp_ci_vig_spo = (ovp_mean_vig_spo - 1.96 * ovp_se_vig_spo,
-                  ovp_mean_vig_spo + 1.96 * ovp_se_vig_spo)
-
+ovp_mean_vig_ovp, ovp_ci_vig_ovp = mean_ci(voter_data[ovp_pos_vig_ovp])
+ovp_mean_vig_spo, ovp_ci_vig_spo = mean_ci(voter_data[ovp_pos_vig_spo])
 print(stats.ttest_ind(voter_data[ovp_pos_vig_ovp], voter_data[ovp_pos_vig_spo],
                       equal_var=False, nan_policy='omit'))
 
@@ -103,10 +102,12 @@ axs[0].set_yticks(list(plot_range))
 axs[0].set_yticklabels(['soften' if x == 0 else
                         'tighten' if x == 10 else
                         x for x in plot_range])
-axs[0].plot([0, 1], [spo_mean_vig_ovp, spo_mean_vig_spo],  # add means to plot
-            linestyle='-', marker='o', color='#e87e7e')
-axs[1].plot([0, 1], [ovp_mean_vig_ovp, ovp_mean_vig_spo],
-            linestyle='-', marker='o', color='#e87e7e')
+axs[0].plot([0, 1], [spo_mean_vig_ovp, spo_mean_vig_spo], linestyle='-', color='#e87e7e')
+axs[0].plot([0, 0], [spo_ci_vig_ovp[0], spo_ci_vig_ovp[1]], linestyle='-', color='#e87e7e')
+axs[0].plot([1, 1], [spo_ci_vig_spo[0], spo_ci_vig_spo[1]], linestyle='-', color='#e87e7e')
+axs[1].plot([0, 1], [ovp_mean_vig_ovp, ovp_mean_vig_spo], linestyle='-', color='#e87e7e')
+axs[1].plot([0, 0], [ovp_ci_vig_ovp[0], ovp_ci_vig_ovp[1]], linestyle='-', color='#e87e7e')
+axs[1].plot([1, 1], [ovp_ci_vig_spo[0], ovp_ci_vig_spo[1]], linestyle='-', color='#e87e7e')
 fig.savefig('position_placement_plt.pdf')
 fig.show()
 
@@ -132,3 +133,53 @@ fig.show()
 #########################
 # multivariate analyses #
 #########################
+
+
+def params_to_df(results, decimals=2):
+    """
+    Creates a pandas.core.frame.DataFrame from the parameters of a fitted statsmodels
+    regression, along with 95% confidence intervals.
+    """
+    coeffs = results.params
+    ci_lower = results.conf_int()[0]
+    ci_upper = results.conf_int()[1]
+    results = pd.DataFrame.from_items([('Coefficients', coeffs),
+                                       ('Lower CI', ci_lower),
+                                       ('Upper CI', ci_upper)])
+    return results.round(decimals)
+
+
+formulas = {'spo': 'spo_pos ~ w2_q23x1 + spo_treatment',
+            'ovp': 'ovp_pos ~ w2_q23x2 + spo_treatment',
+            'spo_int': 'spo_pos ~ w2_q23x1 + spo_treatment*assessment_vig',
+            'ovp_int': 'ovp_pos ~ w2_q23x2 + spo_treatment*assessment_vig'}
+
+ols_results = {}
+for model_name, equation in formulas.items():
+    mod = ols(equation, voter_data)
+    ols_results[model_name] = mod.fit()
+
+for res in ols_results.values():
+    print(params_to_df(res).to_latex())
+
+
+def simulate_regression(results, n=1000):
+    """
+    Takes draws of the parameters from a multivariate normal distribution based
+    on the estimated variance-covariance matrix of the statsmodels regression.
+    Runs the simulation n number of times and return an array with the simulated
+    parameters.
+    """
+    draws = np.zeros(shape=(n, len(results.params)))
+    for i in range(n):
+        draws[i] = np.random.multivariate_normal(np.array(results.params),
+                                                 np.array(results.cov_params()))
+    return draws
+
+
+ass_n = np.arange(1, 6)
+treat_n = np.repeat([1], 5)
+pre = np.full(5, voter_data[spo_pos_pre].mean())
+Xnew = np.column_stack((ass_n, treat_n, pre))
+ynewpred = res.predict(Xnew)  # predict out of sample
+print(ynewpred)
