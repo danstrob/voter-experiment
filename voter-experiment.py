@@ -10,6 +10,7 @@ from simulation import simulate, sim_predict
 sns.set(style='darkgrid', color_codes=True)
 sns.set_palette('pastel')
 party_colors = sns.color_palette(["#5b728a", "#e74c3c"])
+export_path = 'exp-latex/'     # path to export images
 
 # path to Stata file
 stata_file = 'data/AUTNES_OPS_2017_w1-4_DE.dta'
@@ -48,10 +49,11 @@ voter_data['ovp_treatment'] = pd.get_dummies(voter_data['treatment_groups'])['Ö
 
 # create identifier for partisan groups
 voter_data['partisan_id'] = voter_data['w1_q19']
-partisan_dict = {1: 'SPÖ partisans', 2: 'ÖVP partisans'}
+partisan_dict = {1: 'SPÖ partisans', 2: 'ÖVP partisans', np.nan: 'Non-partisans/other'}
 partisan_dict.update({i: 'Non-partisans/other' for i in range(3, 8)})
 voter_data.loc[:, 'partisan_id'] = voter_data['partisan_id'].replace(partisan_dict)
-
+voter_data['spo_partisan'] = pd.get_dummies(voter_data['partisan_id'])['SPÖ partisans']
+voter_data['ovp_partisan'] = pd.get_dummies(voter_data['partisan_id'])['ÖVP partisans']
 
 ##########################
 # descriptive statistics #
@@ -108,7 +110,7 @@ axs[0].plot([1, 1], [spo_ci_vig_spo[0], spo_ci_vig_spo[1]], linestyle='-', color
 axs[1].plot([0, 1], [ovp_mean_vig_ovp, ovp_mean_vig_spo], linestyle='-', color='#e87e7e')
 axs[1].plot([0, 0], [ovp_ci_vig_ovp[0], ovp_ci_vig_ovp[1]], linestyle='-', color='#e87e7e')
 axs[1].plot([1, 1], [ovp_ci_vig_spo[0], ovp_ci_vig_spo[1]], linestyle='-', color='#e87e7e')
-fig.savefig('position_placement_plt.pdf')
+fig.savefig(export_path + 'position_placement_plt.pdf', bbox_inches='tight')
 fig.show()
 
 # assessment by treatment groups
@@ -126,7 +128,7 @@ vio_plot.set_yticklabels(['very bad' if x == 1 else
                           x for x in plot_range])
 vio_plot.legend(bbox_to_anchor=(.7, 1), loc=3, borderaxespad=0.)
 fig.subplots_adjust(left=.2)
-fig.savefig('assessment_plt.pdf')
+fig.savefig(export_path + 'assessment_plt.pdf', bbox_inches='tight')
 fig.show()
 
 
@@ -149,26 +151,69 @@ def params_to_df(res, decimals=2):
     return results.round(decimals)
 
 
-formulas = {'spo': 'spo_pos ~ w2_q23x1 + spo_treatment',
-            'ovp': 'ovp_pos ~ w2_q23x2 + spo_treatment',
-            'spo_int': 'spo_pos ~ w2_q23x1 + spo_treatment*assessment_vig',
-            'ovp_int': 'ovp_pos ~ w2_q23x2 + spo_treatment*assessment_vig'}
+formulas = {'assessment': 'assessment_vig ~ spo_treatment',
+            'assessment_int': 'assessment_vig ~ spo_treatment*spo_partisan',
+            'spo': 'spo_pos ~ w2_q23x1 + spo_treatment',
+            'ovp': 'ovp_pos ~ w2_q23x2 + ovp_treatment',
+            'spo_int': 'spo_pos ~ w2_q23x1 + spo_treatment*partisan_id',
+            'ovp_int': 'ovp_pos ~ w2_q23x2 + ovp_treatment*ovp_partisan'}
 
 ols_results = {}
 for model_name, equation in formulas.items():
     mod = ols(equation, voter_data)
     ols_results[model_name] = mod.fit()
 
+setx_no_treat = {'w2_q23x1': voter_data['w2_q23x1'].mean(),
+                 'spo_treatment': 0}
+setx_treat = {'w2_q23x1': voter_data['w2_q23x1'].mean(),
+              'spo_treatment': 1}
+
+setx1 = {'partisan_id[T.SPÖ partisans]': 1,
+         'partisan_id[T.ÖVP partisans]': 0,
+         'spo_treatment': 0,
+         'spo_treatment:partisan_id[T.SPÖ partisans]': 0,
+         'spo_treatment:partisan_id[T.ÖVP partisans]': 0,
+         'w2_q23x1': voter_data['w2_q23x1'].mean()}
+setx2 = {'partisan_id[T.SPÖ partisans]': 1,
+         'partisan_id[T.ÖVP partisans]': 0,
+         'spo_treatment': 1,
+         'spo_treatment:partisan_id[T.SPÖ partisans]': 1,
+         'spo_treatment:partisan_id[T.ÖVP partisans]': 0,
+         'w2_q23x1': voter_data['w2_q23x1'].mean()}
+setx3 = {'partisan_id[T.SPÖ partisans]': 0,
+         'partisan_id[T.ÖVP partisans]': 1,
+         'spo_treatment': 0,
+         'spo_treatment:partisan_id[T.SPÖ partisans]': 0,
+         'spo_treatment:partisan_id[T.ÖVP partisans]': 0,
+         'w2_q23x1': voter_data['w2_q23x1'].mean()}
+setx4 = {'partisan_id[T.SPÖ partisans]': 0,
+         'partisan_id[T.ÖVP partisans]': 1,
+         'spo_treatment': 1,
+         'spo_treatment:partisan_id[T.SPÖ partisans]': 0,
+         'spo_treatment:partisan_id[T.ÖVP partisans]': 1,
+         'w2_q23x1': voter_data['w2_q23x1'].mean()}
+
+res = simulate(ols_results['spo'], m=10000)
+no_treat = sim_predict(res, setx_no_treat)
+treat = sim_predict(res, setx_treat)
+treatment_effect = treat-no_treat
+
+res_int = simulate(ols_results['spo_int'], m=10000)
+spo_no_treat = sim_predict(res_int, setx1)
+spo_treat = sim_predict(res_int, setx2)
+spo_treatment_effect = spo_treat-spo_no_treat
+ovp_no_treat = sim_predict(res_int, setx3)
+ovp_treat = sim_predict(res_int, setx4)
+ovp_treatment_effect = ovp_treat-ovp_no_treat
+
 for res in ols_results.values():
     print(params_to_df(res).to_latex())
 
 
-sim = simulate(ols_results['spo'], m=10000)
-notreat = sim_predict(sim, setx={'spo_treatment': 0,
-                                 'w2_q23x1': voter_data['w2_q23x1'].mean()})
-treat = sim_predict(sim, setx={'spo_treatment': 1,
-                               'w2_q23x1': voter_data['w2_q23x1'].mean()})
-treatment_effect = treat-notreat
-
-sns.violinplot(treatment_effect, orient='v')
-plt.show()
+effects_df = pd.DataFrame([spo_no_treat,ovp_no_treat],spo_treat,ovp_treat])
+f, ax = plt.subplots()
+sns.despine(bottom=True, left=True)
+sns.stripplot(data=[spo_no_treat,spo_treat,ovp_no_treat,ovp_treat], orient='h',
+              dodge=True, jitter=.05, alpha=.25, zorder=1, palette=party_colors)
+sns.pointplot(data=[spo_no_treat,spo_treat,ovp_no_treat,ovp_treat], orient='h',
+              dodge=.532, join=False, markers="d", scale=.75, ci=None)
