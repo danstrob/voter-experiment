@@ -13,7 +13,7 @@ party_colors = sns.color_palette(["#5b728a", "#e74c3c"])
 export_path = 'exp-latex/'     # path to export images
 
 # path to Stata file
-stata_file = 'data/AUTNES_OPS_2017_w1-4_DE.dta'
+stata_file = 'data/AUTNES_OPS_2017_w1-5_DE.dta'
 
 # relevant variables
 spo_pos_pre = 'w2_q23x1'       # perceived SPÖ pos. on asylum law in 2nd wave
@@ -35,6 +35,8 @@ voter_data = pd.read_stata(stata_file, convert_categoricals=False)
 # create stacked post-vignette variables by filling NAs in treatment groups
 voter_data['spo_pos'] = voter_data[spo_pos_vig_ovp].fillna(voter_data[spo_pos_vig_spo])
 voter_data['ovp_pos'] = voter_data[ovp_pos_vig_ovp].fillna(voter_data[ovp_pos_vig_spo])
+voter_data['spo_shift'] = voter_data['spo_pos'] - voter_data[spo_pos_pre]
+voter_data['ovp_shift'] = voter_data['ovp_pos'] - voter_data[ovp_pos_pre]
 voter_data['assessment_vig'] = -1 * voter_data[assessment_vig_ovp].fillna(
     voter_data[assessment_vig_spo]) + 6  # flip the assessment scale
 
@@ -93,8 +95,8 @@ sns.violinplot(x="treatment_groups", y="spo_pos", data=voter_data,
                ax=axs[0], palette=party_colors)
 sns.violinplot(x="treatment_groups", y="ovp_pos", data=voter_data,
                ax=axs[1], palette=party_colors)
-axs[0].set_title('SPÖ')
-axs[1].set_title('ÖVP')
+axs[0].set_title('SPÖ placement')
+axs[1].set_title('ÖVP placement')
 axs[0].set_ylabel('Policy placement on asylum law')
 axs[1].set_ylabel('')
 axs[0].set_xlabel('')
@@ -112,6 +114,47 @@ axs[1].plot([0, 0], [ovp_ci_vig_ovp[0], ovp_ci_vig_ovp[1]], linestyle='-', color
 axs[1].plot([1, 1], [ovp_ci_vig_spo[0], ovp_ci_vig_spo[1]], linestyle='-', color='#e87e7e')
 fig.savefig(export_path + 'position_placement_plt.pdf', bbox_inches='tight')
 fig.show()
+
+# same thing with barplots
+fig, axs = plt.subplots(ncols=2)
+sns.factorplot(x="treatment_groups", y="spo_pos", data=voter_data,
+               ax=axs[0], kind="bar", palette=party_colors)
+sns.factorplot(x="treatment_groups", y="ovp_pos", data=voter_data,
+               ax=axs[1], kind="bar", palette=party_colors)
+axs[0].set_title('SPÖ placement')
+axs[1].set_title('ÖVP placement')
+axs[0].set_ylabel('Policy placement on asylum law')
+axs[1].set_ylabel('')
+plot_range = np.arange(0, 11, 2)
+for ax in axs:
+    ax.set_xlabel('')
+    ax.set_yticks(list(plot_range))
+axs[0].set_yticklabels(['soften' if x == 0 else
+                        'tighten' if x == 10 else
+                        x for x in plot_range])
+axs[1].set_yticklabels([''])
+fig.savefig(export_path + 'position_placement_plt.pdf', bbox_inches='tight')
+fig.show()
+
+# same thing using /shifts/ from previous survey
+fig, axs = plt.subplots(ncols=2)
+sns.factorplot(x="treatment_groups", y="spo_shift", data=voter_data,
+               ax=axs[0], palette=party_colors)
+sns.factorplot(x="treatment_groups", y="ovp_shift", data=voter_data,
+               ax=axs[1], palette=party_colors)
+axs[0].set_title('Shift in SPÖ placement')
+axs[1].set_title('Shift in ÖVP placement')
+axs[0].set_ylabel('Policy placement on asylum law')
+axs[1].set_ylabel('')
+plot_range = np.array([-0.6, -0.4, -0.2, 0.0])
+for ax in axs:
+    ax.set_xlabel('')
+    ax.set_yticks(list(plot_range))
+axs[1].yaxis.tick_right()
+axs[1].yaxis
+fig.savefig(export_path + 'position_shift_plt.pdf', bbox_inches='tight')
+fig.show()
+
 
 # assessment by treatment groups
 fig, vio_plot = plt.subplots()
@@ -196,24 +239,27 @@ setx4 = {'partisan_id[T.SPÖ partisans]': 0,
 res = simulate(ols_results['spo'], m=10000)
 no_treat = sim_predict(res, setx_no_treat)
 treat = sim_predict(res, setx_treat)
-treatment_effect = treat-no_treat
+treatment_effect = treat - no_treat
 
 res_int = simulate(ols_results['spo_int'], m=10000)
 spo_no_treat = sim_predict(res_int, setx1)
 spo_treat = sim_predict(res_int, setx2)
-spo_treatment_effect = spo_treat-spo_no_treat
+spo_treatment_effect = spo_treat - spo_no_treat
 ovp_no_treat = sim_predict(res_int, setx3)
 ovp_treat = sim_predict(res_int, setx4)
-ovp_treatment_effect = ovp_treat-ovp_no_treat
+ovp_treatment_effect = ovp_treat - ovp_no_treat
 
 for res in ols_results.values():
     print(params_to_df(res).to_latex())
 
 
-effects_df = pd.DataFrame([spo_no_treat,ovp_no_treat],spo_treat,ovp_treat])
 f, ax = plt.subplots()
 sns.despine(bottom=True, left=True)
-sns.stripplot(data=[spo_no_treat,spo_treat,ovp_no_treat,ovp_treat], orient='h',
+sns.stripplot(data=[spo_no_treat, spo_treat, ovp_no_treat, ovp_treat], orient='v',
               dodge=True, jitter=.05, alpha=.25, zorder=1, palette=party_colors)
-sns.pointplot(data=[spo_no_treat,spo_treat,ovp_no_treat,ovp_treat], orient='h',
+sns.pointplot(data=[spo_no_treat, spo_treat, ovp_no_treat, ovp_treat], orient='v',
               dodge=.532, join=False, markers="d", scale=.75, ci=None)
+
+sns.lvplot(data=[no_treat, treat], palette=party_colors, scale='linear')
+
+
