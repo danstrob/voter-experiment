@@ -126,9 +126,19 @@ axs[1].set_title('ÖVP placement')
 axs[0].set_ylabel('Policy placement on asylum law')
 axs[1].set_ylabel('')
 plot_range = np.arange(0, 11, 2)
+means = [spo_mean_vig_ovp, spo_ci_vig_ovp, spo_mean_vig_spo, spo_ci_vig_spo,
+         ovp_mean_vig_ovp, ovp_ci_vig_ovp, ovp_mean_vig_spo, ovp_ci_vig_spo]
 for ax in axs:
     ax.set_xlabel('')
     ax.set_yticks(list(plot_range))
+    for p in ax.patches:
+        height = p.get_height()
+        m = means.pop(0)
+        ll, ul = means.pop(0)
+        ax.text(p.get_x() + p.get_width() / 2.,
+                height + .5,
+                '{:1.2f}\n[{:1.2f},{:1.2f}]'.format(m, ll, ul),
+                ha="center", size=10)
 axs[0].set_yticklabels(['soften' if x == 0 else
                         'tighten' if x == 10 else
                         x for x in plot_range])
@@ -155,7 +165,6 @@ axs[1].yaxis
 fig.savefig(export_path + 'position_shift_plt.pdf', bbox_inches='tight')
 fig.show()
 
-
 # assessment by treatment groups
 fig, vio_plot = plt.subplots()
 vio_plot = sns.violinplot(x='partisan_id', y='assessment_vig',
@@ -178,7 +187,6 @@ fig.show()
 #########################
 # multivariate analyses #
 #########################
-
 
 def params_to_df(res, decimals=2):
     """
