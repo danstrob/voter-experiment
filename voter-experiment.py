@@ -280,4 +280,7 @@ sns.stripplot(data=[spo_no_treat, spo_treat, ovp_no_treat, ovp_treat], orient='v
 sns.pointplot(data=[spo_no_treat, spo_treat, ovp_no_treat, ovp_treat], orient='v',
               dodge=.532, join=False, markers="d", scale=.75, ci=None)
 
-sns.lvplot(data=[no_treat, treat], palette=party_colors, scale='linear')
+fig, axs = plt.subplots(nrows=2)
+sns.violinplot(treatment_effect, palette=party_colors, orient='h')
+sns.violinplot(data=[no_treat, treat], palette=party_colors, orient='h')
+fig.show()
