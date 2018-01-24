@@ -165,6 +165,34 @@ axs[1].yaxis
 fig.savefig(export_path + 'position_shift_plt.pdf', bbox_inches='tight')
 fig.show()
 
+# differences in SPÖ and ÖVP placements by treatment and partisan groups
+fig, axs = plt.subplots(ncols=2)
+sns.factorplot(x='partisan_id', y='spo_pos', kind="bar",
+               hue='treatment_groups', data=voter_data, ax=axs[0],
+               palette=party_colors)
+sns.factorplot(x='partisan_id', y='ovp_pos', kind="bar",
+               hue='treatment_groups', data=voter_data, ax=axs[1], legend=False,
+               palette=party_colors)
+plot_range = np.arange(0, 11, 2)
+xlbls = ['Non-\npartisans/\nother', 'ÖVP\npartisans', 'SPÖ\npartisans']
+for ax in axs:
+    ax.legend('')
+    ax.set_xlabel('')
+    ax.set_yticks(list(plot_range))
+    ax.set_xticklabels(xlbls, {'fontsize': 8})
+axs[0].set_yticklabels(['soften' if x == 0 else
+                        'tighten' if x == 10 else
+                        x for x in plot_range])
+axs[0].set_title('SPÖ placement')
+axs[1].set_title('ÖVP placement')
+axs[0].set_ylabel('Policy placement on asylum law')
+axs[1].set_ylabel('')
+axs[0].legend(title="")
+axs[1].legend('')
+fig.savefig(export_path + 'partisan_placement_plt.pdf', bbox_inches='tight')
+fig.show()
+
+
 # assessment by treatment groups
 fig, vio_plot = plt.subplots()
 vio_plot = sns.violinplot(x='partisan_id', y='assessment_vig',
@@ -212,62 +240,123 @@ for model_name, equation in formulas.items():
     mod = ols(equation, voter_data)
     ols_results[model_name] = mod.fit()
 
-setx_no_treat = {'w2_q23x1': voter_data['w2_q23x1'].mean(),
-                 'spo_treatment': 0}
-setx_treat = {'w2_q23x1': voter_data['w2_q23x1'].mean(),
-              'spo_treatment': 1}
+# spo predictions
+spo_treatment0_non_partisans = {'partisan_id[T.SPÖ partisans]': 0,
+                                'partisan_id[T.ÖVP partisans]': 0,
+                                'spo_treatment': 0,
+                                'spo_treatment:partisan_id[T.SPÖ partisans]': 0,
+                                'spo_treatment:partisan_id[T.ÖVP partisans]': 0,
+                                'w2_q23x1': voter_data['w2_q23x1'].mean()}
+spo_treatment1_non_partisans = {'partisan_id[T.SPÖ partisans]': 0,
+                                'partisan_id[T.ÖVP partisans]': 0,
+                                'spo_treatment': 1,
+                                'spo_treatment:partisan_id[T.SPÖ partisans]': 0,
+                                'spo_treatment:partisan_id[T.ÖVP partisans]': 0,
+                                'w2_q23x1': voter_data['w2_q23x1'].mean()}
+spo_treatment0_spo_partisans = {'partisan_id[T.SPÖ partisans]': 1,
+                                'partisan_id[T.ÖVP partisans]': 0,
+                                'spo_treatment': 0,
+                                'spo_treatment:partisan_id[T.SPÖ partisans]': 1,
+                                'spo_treatment:partisan_id[T.ÖVP partisans]': 0,
+                                'w2_q23x1': voter_data['w2_q23x1'].mean()}
+spo_treatment1_spo_partisans = {'partisan_id[T.SPÖ partisans]': 1,
+                                'partisan_id[T.ÖVP partisans]': 0,
+                                'spo_treatment': 1,
+                                'spo_treatment:partisan_id[T.SPÖ partisans]': 1,
+                                'spo_treatment:partisan_id[T.ÖVP partisans]': 0,
+                                'w2_q23x1': voter_data['w2_q23x1'].mean()}
+spo_treatment0_ovp_partisans = {'partisan_id[T.SPÖ partisans]': 0,
+                                'partisan_id[T.ÖVP partisans]': 1,
+                                'spo_treatment': 0,
+                                'spo_treatment:partisan_id[T.SPÖ partisans]': 0,
+                                'spo_treatment:partisan_id[T.ÖVP partisans]': 0,
+                                'w2_q23x1': voter_data['w2_q23x1'].mean()}
+spo_treatment1_ovp_partisans = {'partisan_id[T.SPÖ partisans]': 0,
+                                'partisan_id[T.ÖVP partisans]': 1,
+                                'spo_treatment': 1,
+                                'spo_treatment:partisan_id[T.SPÖ partisans]': 0,
+                                'spo_treatment:partisan_id[T.ÖVP partisans]': 1,
+                                'w2_q23x1': voter_data['w2_q23x1'].mean()}
 
-int_setx1 = {'partisan_id[T.SPÖ partisans]': 1,
-             'partisan_id[T.ÖVP partisans]': 0,
-             'spo_treatment': 0,
-             'spo_treatment:partisan_id[T.SPÖ partisans]': 0,
-             'spo_treatment:partisan_id[T.ÖVP partisans]': 0,
-             'w2_q23x1': voter_data['w2_q23x1'].mean()}
-int_setx2 = {'partisan_id[T.SPÖ partisans]': 1,
-             'partisan_id[T.ÖVP partisans]': 0,
-             'spo_treatment': 1,
-             'spo_treatment:partisan_id[T.SPÖ partisans]': 1,
-             'spo_treatment:partisan_id[T.ÖVP partisans]': 0,
-             'w2_q23x1': voter_data['w2_q23x1'].mean()}
+# ovp predictions
+ovp_treatment0_non_partisans = {'partisan_id[T.SPÖ partisans]': 0,
+                                'partisan_id[T.ÖVP partisans]': 0,
+                                'spo_treatment': 0,
+                                'spo_treatment:partisan_id[T.SPÖ partisans]': 0,
+                                'spo_treatment:partisan_id[T.ÖVP partisans]': 0,
+                                'w2_q23x2': voter_data['w2_q23x2'].mean()}
+ovp_treatment1_non_partisans = {'partisan_id[T.SPÖ partisans]': 0,
+                                'partisan_id[T.ÖVP partisans]': 0,
+                                'spo_treatment': 1,
+                                'spo_treatment:partisan_id[T.SPÖ partisans]': 0,
+                                'spo_treatment:partisan_id[T.ÖVP partisans]': 0,
+                                'w2_q23x2': voter_data['w2_q23x2'].mean()}
+ovp_treatment0_spo_partisans = {'partisan_id[T.SPÖ partisans]': 1,
+                                'partisan_id[T.ÖVP partisans]': 0,
+                                'spo_treatment': 0,
+                                'spo_treatment:partisan_id[T.SPÖ partisans]': 1,
+                                'spo_treatment:partisan_id[T.ÖVP partisans]': 0,
+                                'w2_q23x2': voter_data['w2_q23x2'].mean()}
+ovp_treatment1_spo_partisans = {'partisan_id[T.SPÖ partisans]': 1,
+                                'partisan_id[T.ÖVP partisans]': 0,
+                                'spo_treatment': 1,
+                                'spo_treatment:partisan_id[T.SPÖ partisans]': 1,
+                                'spo_treatment:partisan_id[T.ÖVP partisans]': 0,
+                                'w2_q23x2': voter_data['w2_q23x2'].mean()}
+ovp_treatment0_ovp_partisans = {'partisan_id[T.SPÖ partisans]': 0,
+                                'partisan_id[T.ÖVP partisans]': 1,
+                                'spo_treatment': 0,
+                                'spo_treatment:partisan_id[T.SPÖ partisans]': 0,
+                                'spo_treatment:partisan_id[T.ÖVP partisans]': 0,
+                                'w2_q23x2': voter_data['w2_q23x2'].mean()}
+ovp_treatment1_ovp_partisans = {'partisan_id[T.SPÖ partisans]': 0,
+                                'partisan_id[T.ÖVP partisans]': 1,
+                                'spo_treatment': 1,
+                                'spo_treatment:partisan_id[T.SPÖ partisans]': 0,
+                                'spo_treatment:partisan_id[T.ÖVP partisans]': 1,
+                                'w2_q23x2': voter_data['w2_q23x2'].mean()}
 
-setx3 = {'partisan_id[T.SPÖ partisans]': 0,
-         'partisan_id[T.ÖVP partisans]': 1,
-         'spo_treatment': 0,
-         'spo_treatment:partisan_id[T.SPÖ partisans]': 0,
-         'spo_treatment:partisan_id[T.ÖVP partisans]': 0,
-         'w2_q23x1': voter_data['w2_q23x1'].mean()}
-setx4 = {'partisan_id[T.SPÖ partisans]': 0,
-         'partisan_id[T.ÖVP partisans]': 1,
-         'spo_treatment': 1,
-         'spo_treatment:partisan_id[T.SPÖ partisans]': 0,
-         'spo_treatment:partisan_id[T.ÖVP partisans]': 1,
-         'w2_q23x1': voter_data['w2_q23x1'].mean()}
 
-res = simulate(ols_results['spo_int'], m=10000)
-partisans_no_treat = sim_predict(res, int_setx1)
-partisans_treat = sim_predict(res, int_setx2)
-partisans_treatment_effect = partisans_treat - partisans_no_treat
+# spo simulation
+spo_res = simulate(ols_results['spo_int'], m=10000)
+spo_t0_non_partisans = sim_predict(spo_res, spo_treatment0_non_partisans)
+spo_t1_non_partisans = sim_predict(spo_res, spo_treatment1_non_partisans)
+spo_effect_non_partisans = spo_t1_non_partisans - spo_t0_non_partisans
+spo_t0_spo_partisans = sim_predict(spo_res, spo_treatment0_spo_partisans)
+spo_t1_spo_partisans = sim_predict(spo_res, spo_treatment1_spo_partisans)
+spo_effect_spo_partisans = spo_t1_spo_partisans - spo_t0_spo_partisans
+spo_t0_ovp_partisans = sim_predict(spo_res, spo_treatment0_ovp_partisans)
+spo_t1_ovp_partisans = sim_predict(spo_res, spo_treatment1_ovp_partisans)
+spo_effect_ovp_partisans = spo_t1_ovp_partisans - spo_t0_ovp_partisans
 
-res_int = simulate(ols_results['assessment_int'], m=10000)
-spo_no_treat = sim_predict(res_int, assess_setx1)
-spo_treat = sim_predict(res_int, assess_setx2)
-spo_treatment_effect = spo_treat - spo_no_treat
-ovp_no_treat = sim_predict(res_int, setx3)
-ovp_treat = sim_predict(res_int, setx4)
-ovp_treatment_effect = ovp_treat - ovp_no_treat
+# ovp simulation
+ovp_res = simulate(ols_results['ovp_int'], m=10000)
+ovp_t0_non_partisans = sim_predict(ovp_res, ovp_treatment0_non_partisans)
+ovp_t1_non_partisans = sim_predict(ovp_res, ovp_treatment1_non_partisans)
+ovp_effect_non_partisans = ovp_t1_non_partisans - ovp_t0_non_partisans
+ovp_t0_spo_partisans = sim_predict(ovp_res, ovp_treatment0_spo_partisans)
+ovp_t1_spo_partisans = sim_predict(ovp_res, ovp_treatment1_spo_partisans)
+ovp_effect_spo_partisans = ovp_t1_spo_partisans - ovp_t0_spo_partisans
+ovp_t0_ovp_partisans = sim_predict(ovp_res, ovp_treatment0_ovp_partisans)
+ovp_t1_ovp_partisans = sim_predict(ovp_res, ovp_treatment1_ovp_partisans)
+ovp_effect_ovp_partisans = ovp_t1_ovp_partisans - ovp_t0_ovp_partisans
 
 for res in ols_results.values():
     print(params_to_df(res).to_latex())
 
-
-f, ax = plt.subplots()
-sns.despine(bottom=True, left=True)
-sns.stripplot(data=[spo_no_treat, spo_treat, ovp_no_treat, ovp_treat], orient='v',
-              dodge=True, jitter=.05, alpha=.25, zorder=1, palette=party_colors)
-sns.pointplot(data=[spo_no_treat, spo_treat, ovp_no_treat, ovp_treat], orient='v',
-              dodge=.532, join=False, markers="d", scale=.75, ci=None)
-
-fig, axs = plt.subplots(nrows=2)
-sns.violinplot(partisans_treatment_effect, palette=party_colors, orient='h')
-sns.violinplot(data=[no_treat, treat], palette=party_colors, orient='h')
-plt.show()
+vio_color = sns.color_palette(['#9a9a9a', "#5b728a", "#e74c3c"])
+fig, axs = plt.subplots(ncols=2)
+sns.violinplot(data=[spo_effect_non_partisans, spo_effect_ovp_partisans,
+               spo_effect_spo_partisans], ax=axs[0], palette=vio_color, orient='h')
+sns.violinplot(data=[ovp_effect_non_partisans, ovp_effect_ovp_partisans,
+               ovp_effect_spo_partisans], ax=axs[1], palette=vio_color, orient='h')
+xlbls = ['Non-\npartisans/\nother', 'ÖVP\npartisans', 'SPÖ\npartisans']
+for ax in axs:
+    ax.set_aspect(1)
+    # ax.set_xlabel('')
+    ax.set_yticklabels(xlbls, {'fontsize': 9})
+axs[0].set_title('SPÖ placement (Model 3)')
+axs[1].set_title('ÖVP placement (Model 4)')
+axs[0].set_ylabel('Change in policy placements (first differences)')
+fig.savefig(export_path + 'effects_plt.pdf', bbox_inches='tight')
+fig.show()
