@@ -345,18 +345,20 @@ for res in ols_results.values():
     print(params_to_df(res).to_latex())
 
 vio_color = sns.color_palette(['#9a9a9a', "#5b728a", "#e74c3c"])
-fig, axs = plt.subplots(ncols=2)
+fig, axs = plt.subplots(ncols=2, figsize=(7, 3), sharex=True)
 sns.violinplot(data=[spo_effect_non_partisans, spo_effect_ovp_partisans,
-               spo_effect_spo_partisans], ax=axs[0], palette=vio_color, orient='h')
+                     spo_effect_spo_partisans], ax=axs[0], palette=vio_color, orient='h')
 sns.violinplot(data=[ovp_effect_non_partisans, ovp_effect_ovp_partisans,
-               ovp_effect_spo_partisans], ax=axs[1], palette=vio_color, orient='h')
+                     ovp_effect_spo_partisans], ax=axs[1], palette=vio_color, orient='h')
 xlbls = ['Non-\npartisans/\nother', 'ÖVP\npartisans', 'SPÖ\npartisans']
+plot_range = np.arange(-1, 2, .5)
 for ax in axs:
-    ax.set_aspect(1)
-    # ax.set_xlabel('')
-    ax.set_yticklabels(xlbls, {'fontsize': 9})
+    ax.set_xticks(list(plot_range))
+    ax.axvline(zorder=.9)
 axs[0].set_title('SPÖ placement (Model 3)')
 axs[1].set_title('ÖVP placement (Model 4)')
-axs[0].set_ylabel('Change in policy placements (first differences)')
+axs[0].set_yticklabels(xlbls, {'fontsize': 9})
+axs[1].set_yticklabels('')
+fig.text(0.5, -0.04, 'Treatment effect (first difference in expected values)', ha='center')
 fig.savefig(export_path + 'effects_plt.pdf', bbox_inches='tight')
 fig.show()
