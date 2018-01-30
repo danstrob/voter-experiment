@@ -41,12 +41,12 @@ def simulate(res, m=1000):
     return sim_results
 
 
-def sim_predict(sim_results, setx, quantity='ev'):
+def sim_predict(sim_results, setx, quantity='expected'):
     pred = sim_results.copy()
     for x, value in setx.items():
         pred[x] = pred.loc[:, x] * value
 
-    if quantity == 'pv':
+    if quantity == 'predicted':
         pred['e'] = np.random.normal(0, np.sqrt(pred['sigma_squared']))
 
     return pred.loc[:, pred.columns != 'sigma_squared'].sum(axis=1)
