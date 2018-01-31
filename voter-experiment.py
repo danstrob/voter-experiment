@@ -202,12 +202,10 @@ def params_to_df(res, decimals=2):
     return results.round(decimals)
 
 
-formulas = {'assessment': 'assessment_vig ~ spo_treatment',
-            'assessment_int': 'assessment_vig ~ spo_treatment*partisan_id',
-            'spo': 'spo_pos ~ w2_q23x1 + spo_treatment',
-            'ovp': 'ovp_pos ~ w2_q23x2 + ovp_treatment',
+formulas = {'spo': 'spo_pos ~ w2_q23x1 + spo_treatment',
+            'ovp': 'ovp_pos ~ w2_q23x2 + spo_treatment',
             'spo_int': 'spo_pos ~ w2_q23x1 + spo_treatment*partisan_id',
-            'ovp_int': 'ovp_pos ~ w2_q23x2 + ovp_treatment*partisan_id'}
+            'ovp_int': 'ovp_pos ~ w2_q23x2 + spo_treatment*partisan_id'}
 
 ols_results = {}
 for model_name, equation in formulas.items():
@@ -218,17 +216,6 @@ setx_no_treat = {'w2_q23x1': voter_data['w2_q23x1'].mean(),
                  'spo_treatment': 0}
 setx_treat = {'w2_q23x1': voter_data['w2_q23x1'].mean(),
               'spo_treatment': 1}
-
-assess_setx1 = {'partisan_id[T.SPÖ partisans]': 0,
-                'partisan_id[T.ÖVP partisans]': 0,
-                'spo_treatment': 0,
-                'spo_treatment:partisan_id[T.SPÖ partisans]': 0,
-                'spo_treatment:partisan_id[T.ÖVP partisans]': 0}
-assess_setx2 = {'partisan_id[T.SPÖ partisans]': 0,
-                'partisan_id[T.ÖVP partisans]': 0,
-                'spo_treatment': 1,
-                'spo_treatment:partisan_id[T.SPÖ partisans]': 0,
-                'spo_treatment:partisan_id[T.ÖVP partisans]': 0}
 
 int_setx1 = {'partisan_id[T.SPÖ partisans]': 1,
              'partisan_id[T.ÖVP partisans]': 0,
@@ -256,10 +243,10 @@ setx4 = {'partisan_id[T.SPÖ partisans]': 0,
          'spo_treatment:partisan_id[T.ÖVP partisans]': 1,
          'w2_q23x1': voter_data['w2_q23x1'].mean()}
 
-res = simulate(ols_results['spo'], m=10000)
-no_treat = sim_predict(res, setx_no_treat)
-treat = sim_predict(res, setx_treat)
-treatment_effect = treat - no_treat
+res = simulate(ols_results['spo_int'], m=10000)
+partisans_no_treat = sim_predict(res, int_setx1)
+partisans_treat = sim_predict(res, int_setx2)
+partisans_treatment_effect = partisans_treat - partisans_no_treat
 
 <<<<<<< HEAD
 res_int = simulate(ols_results['assessment_int'], m=10000)
@@ -296,7 +283,11 @@ sns.distplot(treatment_effect, hist=False)
 >>>>>>> 371d5a2... new dataset and graphs for shifts in placements
 =======
 fig, axs = plt.subplots(nrows=2)
-sns.violinplot(treatment_effect, palette=party_colors, orient='h')
+sns.violinplot(partisans_treatment_effect, palette=party_colors, orient='h')
 sns.violinplot(data=[no_treat, treat], palette=party_colors, orient='h')
+<<<<<<< HEAD
 fig.show()
 >>>>>>> 8cef502... add treatment effect plot
+=======
+plt.show()
+>>>>>>> fa5c0dc... clean up predictions
