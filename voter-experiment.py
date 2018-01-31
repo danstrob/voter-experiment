@@ -7,8 +7,7 @@ from statsmodels.formula.api import ols
 from simulation import simulate, sim_predict
 
 # seaborn plot style settings
-sns.set(style='darkgrid', color_codes=True)
-sns.set_palette('pastel')
+sns.set(style='darkgrid', color_codes=True, palette='pastel')
 party_colors = sns.color_palette(["#5b728a", "#e74c3c"])
 export_path = 'exp-latex/'     # path to export images
 
@@ -97,7 +96,7 @@ sns.violinplot(x="treatment_groups", y="ovp_pos", data=voter_data,
                ax=axs[1], palette=party_colors)
 axs[0].set_title('SPÖ placement')
 axs[1].set_title('ÖVP placement')
-axs[0].set_ylabel('Policy placement on asylum law')
+axs[0].set_ylabel('Party placement on asylum law')
 axs[1].set_ylabel('')
 axs[0].set_xlabel('')
 axs[1].set_xlabel('')
@@ -123,7 +122,7 @@ sns.factorplot(x="treatment_groups", y="ovp_pos", data=voter_data,
                ax=axs[1], kind="bar", palette=party_colors)
 axs[0].set_title('SPÖ placement')
 axs[1].set_title('ÖVP placement')
-axs[0].set_ylabel('Policy placement on asylum law')
+axs[0].set_ylabel('Party placement on asylum law')
 axs[1].set_ylabel('')
 plot_range = np.arange(0, 11, 2)
 means = [spo_mean_vig_ovp, spo_ci_vig_ovp, spo_mean_vig_spo, spo_ci_vig_spo,
@@ -154,7 +153,7 @@ sns.factorplot(x="treatment_groups", y="ovp_shift", data=voter_data,
                ax=axs[1], palette=party_colors)
 axs[0].set_title('Shift in SPÖ placement')
 axs[1].set_title('Shift in ÖVP placement')
-axs[0].set_ylabel('Policy placement on asylum law')
+axs[0].set_ylabel('Party placement on asylum law')
 axs[1].set_ylabel('')
 plot_range = np.array([-0.6, -0.4, -0.2, 0.0])
 for ax in axs:
@@ -185,7 +184,7 @@ axs[0].set_yticklabels(['soften' if x == 0 else
                         x for x in plot_range])
 axs[0].set_title('SPÖ placement')
 axs[1].set_title('ÖVP placement')
-axs[0].set_ylabel('Policy placement on asylum law')
+axs[0].set_ylabel('Party placement on asylum law')
 axs[1].set_ylabel('')
 axs[0].legend(title="")
 axs[1].legend('')
@@ -241,6 +240,7 @@ for model_name, equation in formulas.items():
     ols_results[model_name] = mod.fit()
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 setx_no_treat = {'w2_q23x1': voter_data['w2_q23x1'].mean(),
                  'spo_treatment': 0}
 setx_treat = {'w2_q23x1': voter_data['w2_q23x1'].mean(),
@@ -292,6 +292,21 @@ ovp_treat = sim_predict(res_int, setx4)
 ovp_treatment_effect = ovp_treat - ovp_no_treat
 =======
 # spo predictions
+=======
+# spo predictions (model 1)
+spo_treatment0 = {'spo_treatment': 0,
+                  'w2_q23x1': voter_data['w2_q23x1'].mean()}
+spo_treatment1 = {'spo_treatment': 1,
+                  'w2_q23x1': voter_data['w2_q23x1'].mean()}
+
+# ovp predictions (model 2)
+ovp_treatment0 = {'spo_treatment': 0,
+                  'w2_q23x2': voter_data['w2_q23x2'].mean()}
+ovp_treatment1 = {'spo_treatment': 1,
+                  'w2_q23x2': voter_data['w2_q23x2'].mean()}
+
+# spo interaction predictions (model 3)
+>>>>>>> 20578bd... plots for expected values (model 1 and 2)
 spo_treatment0_non_partisans = {'partisan_id[T.SPÖ partisans]': 0,
                                 'partisan_id[T.ÖVP partisans]': 0,
                                 'spo_treatment': 0,
@@ -329,7 +344,7 @@ spo_treatment1_ovp_partisans = {'partisan_id[T.SPÖ partisans]': 0,
                                 'spo_treatment:partisan_id[T.ÖVP partisans]': 1,
                                 'w2_q23x1': voter_data['w2_q23x1'].mean()}
 
-# ovp predictions
+# ovp interaction predictions  (model 4)
 ovp_treatment0_non_partisans = {'partisan_id[T.SPÖ partisans]': 0,
                                 'partisan_id[T.ÖVP partisans]': 0,
                                 'spo_treatment': 0,
@@ -368,7 +383,33 @@ ovp_treatment1_ovp_partisans = {'partisan_id[T.SPÖ partisans]': 0,
                                 'w2_q23x2': voter_data['w2_q23x2'].mean()}
 
 
-# spo simulation
+for res in ols_results.values():
+    print(params_to_df(res).to_latex())
+
+
+# simulate expected values based on model 1 and 2
+spo = simulate(ols_results['spo'], m=10000)
+ovp = simulate(ols_results['ovp'], m=10000)
+spo_t0 = sim_predict(spo, spo_treatment0)
+spo_t1 = sim_predict(spo, spo_treatment1)
+ovp_t0 = sim_predict(ovp, ovp_treatment0)
+ovp_t1 = sim_predict(ovp, ovp_treatment1)
+
+# plot expected values based on model 1 and 2
+fig, axs = plt.subplots(ncols=2)
+sns.violinplot(data=[spo_t0, spo_t1], ax=axs[0], palette=party_colors)
+sns.violinplot(data=[ovp_t0, ovp_t1], ax=axs[1], palette=party_colors)
+axs[0].set_title('SPÖ placement (Model 1)')
+axs[1].set_title('ÖVP placement (Model 2)')
+axs[0].set_ylabel('Party placement on asylum law (expected values)')
+xlbls = ['ÖVP\ntreatment', 'SPÖ\ntreatment']
+for ax in axs:
+    ax.set_xticklabels(xlbls, {'fontsize': 9})
+fig.savefig(export_path + 'expected_plt.pdf', bbox_inches='tight')
+fig.show()
+
+
+# spo simulation (model 3)
 spo_res = simulate(ols_results['spo_int'], m=10000)
 spo_t0_non_partisans = sim_predict(spo_res, spo_treatment0_non_partisans)
 spo_t1_non_partisans = sim_predict(spo_res, spo_treatment1_non_partisans)
@@ -380,7 +421,7 @@ spo_t0_ovp_partisans = sim_predict(spo_res, spo_treatment0_ovp_partisans)
 spo_t1_ovp_partisans = sim_predict(spo_res, spo_treatment1_ovp_partisans)
 spo_effect_ovp_partisans = spo_t1_ovp_partisans - spo_t0_ovp_partisans
 
-# ovp simulation
+# ovp simulation (model 4)
 ovp_res = simulate(ols_results['ovp_int'], m=10000)
 ovp_t0_non_partisans = sim_predict(ovp_res, ovp_treatment0_non_partisans)
 ovp_t1_non_partisans = sim_predict(ovp_res, ovp_treatment1_non_partisans)
@@ -393,6 +434,7 @@ ovp_t1_ovp_partisans = sim_predict(ovp_res, ovp_treatment1_ovp_partisans)
 ovp_effect_ovp_partisans = ovp_t1_ovp_partisans - ovp_t0_ovp_partisans
 >>>>>>> a368222... barcharts with partisan group means and messy predicitions
 
+<<<<<<< HEAD
 for res in ols_results.values():
     print(params_to_df(res).to_latex())
 
@@ -424,6 +466,9 @@ fig.show()
 plt.show()
 >>>>>>> fa5c0dc... clean up predictions
 =======
+=======
+# plot first differences by partisan groups based on model 3 and 4
+>>>>>>> 20578bd... plots for expected values (model 1 and 2)
 vio_color = sns.color_palette(['#9a9a9a', "#5b728a", "#e74c3c"])
 fig, axs = plt.subplots(ncols=2, figsize=(7, 3), sharex=True)
 sns.violinplot(data=[spo_effect_non_partisans, spo_effect_ovp_partisans,
@@ -439,7 +484,7 @@ axs[0].set_title('SPÖ placement (Model 3)')
 axs[1].set_title('ÖVP placement (Model 4)')
 axs[0].set_yticklabels(xlbls, {'fontsize': 9})
 axs[1].set_yticklabels('')
-fig.text(0.5, -0.04, 'Treatment effect (first difference in expected values)', ha='center')
+fig.text(0.5, -0.04, 'Treatment effect (first differences)', ha='center')
 fig.savefig(export_path + 'effects_plt.pdf', bbox_inches='tight')
 fig.show()
 >>>>>>> a368222... barcharts with partisan group means and messy predicitions
