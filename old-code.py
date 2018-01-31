@@ -23,9 +23,10 @@ bar5 = ax.bar(ind, y[4], bottom=bottom, color='#7c0510')
 fig.legend([bar1, bar2, bar3, bar4, bar5],
            ['very good', 'good', 'so-so', 'bad', 'very bad'],
            bbox_to_anchor=(.8, 1), ncol=3, fancybox=True, shadow=True)
-ax.set_ylabel('Assessment of asylum law')
+ax.set_ylabel('Percentage')
 plt.xticks([.5, 3.5, 6.5], ['Non-partisan/other',
                             'SPÖ partisan', 'ÖVP partisan'])
+plt.savefig(export_path + 'rating_barchart.pdf', bbox_inches='tight')
 plt.show()
 
 

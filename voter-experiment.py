@@ -286,6 +286,7 @@ sns.stripplot(data=[spo_no_treat, spo_treat, ovp_no_treat, ovp_treat], orient='v
 sns.pointplot(data=[spo_no_treat, spo_treat, ovp_no_treat, ovp_treat], orient='v',
               dodge=.532, join=False, markers="d", scale=.75, ci=None)
 
+<<<<<<< HEAD
 sns.lvplot(data=[no_treat, treat], palette=party_colors, scale='linear')
 <<<<<<< HEAD
 sns.distplot(treatment_effect, hist=False)
@@ -293,3 +294,9 @@ sns.distplot(treatment_effect, hist=False)
 
 
 >>>>>>> 371d5a2... new dataset and graphs for shifts in placements
+=======
+fig, axs = plt.subplots(nrows=2)
+sns.violinplot(treatment_effect, palette=party_colors, orient='h')
+sns.violinplot(data=[no_treat, treat], palette=party_colors, orient='h')
+fig.show()
+>>>>>>> 8cef502... add treatment effect plot
