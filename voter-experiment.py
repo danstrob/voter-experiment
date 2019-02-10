@@ -12,7 +12,7 @@ party_colors = sns.color_palette(["#5b728a", "#e74c3c"])
 export_path = 'exp-latex/'     # path to export images
 
 # path to Stata file
-stata_file = 'data/AUTNES_OPS_2017_w1-5_DE.dta'
+stata_file = 'data/surveydata.dta'
 
 # relevant variables
 spo_pos_pre = 'w2_q23x1'       # perceived SPÖ pos. on asylum law in 2nd wave
